@@ -1,8 +1,11 @@
 FROM php:8.2-fpm
 
-# System deps
+# System dependencies
 RUN apt-get update && apt-get install -y \
-    git curl unzip libpng-dev libonig-dev libxml2-dev libzip-dev \
+    git curl unzip pkg-config libssl-dev \
+    libpng-dev libonig-dev libxml2-dev libzip-dev \
+    && pecl install mongodb grpc \
+    && docker-php-ext-enable mongodb grpc \
     && docker-php-ext-install pdo_mysql mbstring zip exif pcntl bcmath gd \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -11,17 +14,18 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
-# Copy only composer files first (CACHE FRIENDLY)
+# Copy composer files first
 COPY composer.json composer.lock ./
 
+# Install PHP dependencies
 RUN COMPOSER_MEMORY_LIMIT=-1 composer install \
     --no-dev \
     --optimize-autoloader \
     --no-interaction \
     --no-progress \
     --no-scripts
-    
-# Copy rest of app
+
+# Copy rest of application
 COPY . .
 
 # Permissions
