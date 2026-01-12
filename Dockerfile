@@ -1,61 +1,27 @@
-# =========================
-# 1. Base PHP image
-# =========================
 FROM php:8.2-fpm
 
-# =========================
-# 2. Install system deps
-# =========================
+# System deps
 RUN apt-get update && apt-get install -y \
-    git \
-    curl \
-    unzip \
-    libpng-dev \
-    libonig-dev \
-    libxml2-dev \
-    libzip-dev \
-    zip \
-    nginx \
+    git curl unzip libpng-dev libonig-dev libxml2-dev libzip-dev \
     && docker-php-ext-install pdo_mysql mbstring zip exif pcntl bcmath gd \
-    && apt-get clean
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# =========================
-# 3. Install Composer
-# =========================
+# Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# =========================
-# 4. Set working directory
-# =========================
 WORKDIR /var/www/html
 
-# =========================
-# 5. Copy Laravel files
-# =========================
+# Copy only composer files first (CACHE FRIENDLY)
+COPY composer.json composer.lock ./
+
+RUN composer install --no-dev --optimize-autoloader --no-interaction
+
+# Copy rest of app
 COPY . .
 
-# =========================
-# 6. Install PHP dependencies
-# =========================
-RUN composer install --no-dev --optimize-autoloader
-
-# =========================
-# 7. Permissions
-# =========================
+# Permissions
 RUN chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
-# =========================
-# 8. Nginx config
-# =========================
-COPY docker/nginx.conf /etc/nginx/sites-available/default
-
-# =========================
-# 9. Expose port
-# =========================
-EXPOSE 80
-
-# =========================
-# 10. Start services
-# =========================
-CMD service nginx start && php-fpm
+EXPOSE 9000
+CMD ["php-fpm"]
