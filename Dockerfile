@@ -14,8 +14,13 @@ WORKDIR /var/www/html
 # Copy only composer files first (CACHE FRIENDLY)
 COPY composer.json composer.lock ./
 
-RUN composer install --no-dev --optimize-autoloader --no-interaction
-
+RUN COMPOSER_MEMORY_LIMIT=-1 composer install \
+    --no-dev \
+    --optimize-autoloader \
+    --no-interaction \
+    --no-progress \
+    --no-scripts
+    
 # Copy rest of app
 COPY . .
 
